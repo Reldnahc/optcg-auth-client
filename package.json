@@ -1,0 +1,43 @@
+{
+  "name": "optcg-auth-client",
+  "version": "0.1.0",
+  "description": "Typed browser client for the Poneglyph auth service",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Reldnahc/optcg-auth-client.git"
+  },
+  "homepage": "https://github.com/Reldnahc/optcg-auth-client#readme",
+  "bugs": {
+    "url": "https://github.com/Reldnahc/optcg-auth-client/issues"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run test",
+    "test": "npm run build && node test/client.test.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.0",
+    "typescript": "^5.9.3"
+  }
+}
