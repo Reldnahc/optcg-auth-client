@@ -123,7 +123,6 @@ test("createAuthClient exposes typed auth endpoint helpers", async () => {
   const login = await client.login({ username: "tester", password: "password" });
   const register = await client.register({
     username: "tester",
-    display_name: "Tester",
     email: "tester@example.com",
     password: "password",
   });
@@ -133,6 +132,12 @@ test("createAuthClient exposes typed auth endpoint helpers", async () => {
   assert.equal(login.data.user.username, "tester");
   assert.equal(register.data.token, "opaque-token");
   assert.equal(session.data.session.id, "session-1");
+  assert.deepEqual(JSON.parse(requests[1].init.body), {
+    username: "tester",
+    password: "password",
+    display_name: "tester",
+    email: "tester@example.com",
+  });
   assert.deepEqual(
     requests.map((request) => request.input),
     [

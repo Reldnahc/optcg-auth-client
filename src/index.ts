@@ -37,8 +37,11 @@ export type LoginInput = {
 export type RegisterInput = {
   username: string;
   password: string;
-  display_name?: string;
   email?: string | null;
+};
+
+type RegisterPayload = RegisterInput & {
+  display_name: string;
 };
 
 export type AuthResponse = {
@@ -297,7 +300,11 @@ export function createAuthClient(options: AuthClientOptions = {}) {
       return authPost<AuthResponse>("/auth/login", input, { ...options, ...requestOptions });
     },
     register(input: RegisterInput, requestOptions: AuthRequestOptions = {}) {
-      return authPost<AuthResponse>("/auth/register", input, { ...options, ...requestOptions });
+      const payload: RegisterPayload = {
+        ...input,
+        display_name: input.username,
+      };
+      return authPost<AuthResponse>("/auth/register", payload, { ...options, ...requestOptions });
     },
     logout(requestOptions: AuthRequestOptions = {}) {
       return authPost<LogoutResponse>("/auth/logout", {}, { ...options, ...requestOptions });
