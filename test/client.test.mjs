@@ -7,6 +7,7 @@ import {
   authPost,
   buildAuthUrl,
   createAuthClient,
+  createLoadoutFromDeckHash,
   createSimHandoff,
   verifySimHandoff,
 } from "../dist/index.js";
@@ -180,6 +181,53 @@ test("listLoadouts fetches account loadouts with browser credentials", async () 
     ["https://auth.example/v1/loadouts"],
   );
   assert.equal(requests[0].init.credentials, "include");
+});
+
+test("createLoadoutFromDeckHash posts only the hash and name", async () => {
+  const requests = [];
+  const fetchImpl = (input, init) => {
+    requests.push({ input: String(input), init });
+    return Promise.resolve(jsonResponse({
+      data: {
+        id: "loadout-1",
+        name: "Imported deck",
+        main_deck_id: "deck-1",
+        don_deck_id: null,
+        playmat_id: "playmat-default",
+        don_sleeve_id: "don-default",
+        deck_sleeve_id: "deck-default",
+        icon_id: "icon-default",
+        updated_at: "2026-06-03T00:00:00.000Z",
+      },
+    }));
+  };
+  const client = createAuthClient({ baseUrl: "https://auth.example", fetch: fetchImpl });
+
+  const response = await createLoadoutFromDeckHash({
+    name: "Imported deck",
+    deck_hash: "hash-with-variants",
+  }, { baseUrl: "https://auth.example", fetch: fetchImpl });
+  const clientResponse = await client.createLoadoutFromDeckHash({
+    name: "Imported deck",
+    deck_hash: "hash-with-variants",
+  });
+
+  assert.equal(response.data.main_deck_id, "deck-1");
+  assert.equal(clientResponse.data.main_deck_id, "deck-1");
+  assert.deepEqual(
+    requests.map((request) => request.input),
+    [
+      "https://auth.example/v1/loadouts/import-deck-hash",
+      "https://auth.example/v1/loadouts/import-deck-hash",
+    ],
+  );
+  assert.equal(requests.every((request) => request.init.method === "POST"), true);
+  assert.equal(requests.every((request) => request.init.credentials === "include"), true);
+  assert.deepEqual(JSON.parse(requests[0].init.body), {
+    name: "Imported deck",
+    deck_hash: "hash-with-variants",
+  });
+  assert.equal(requests[0].init.body.includes('"deck"'), false);
 });
 
 test("resolveLoadout fetches the sim-facing resolved loadout package", async () => {

@@ -81,6 +81,15 @@ export type LoadoutListResponse = {
   data: Loadout[];
 };
 
+export type CreateLoadoutFromDeckHashInput = {
+  name: string;
+  deck_hash: string;
+};
+
+export type LoadoutResponse = {
+  data: Loadout;
+};
+
 export type CreateSimHandoffInput = {
   loadout_id: string;
   lobby_id?: string | null;
@@ -267,6 +276,13 @@ export function listLoadouts(options: AuthRequestOptions = {}) {
   return authFetch<LoadoutListResponse>("/loadouts", undefined, options);
 }
 
+export function createLoadoutFromDeckHash(
+  input: CreateLoadoutFromDeckHashInput,
+  options: AuthRequestOptions = {},
+) {
+  return authPost<LoadoutResponse>("/loadouts/import-deck-hash", input, options);
+}
+
 export function resolveLoadout(
   loadoutId: string,
   options: AuthRequestOptions = {},
@@ -314,6 +330,9 @@ export function createAuthClient(options: AuthClientOptions = {}) {
     },
     listLoadouts(requestOptions: AuthRequestOptions = {}) {
       return listLoadouts({ ...options, ...requestOptions });
+    },
+    createLoadoutFromDeckHash(input: CreateLoadoutFromDeckHashInput, requestOptions: AuthRequestOptions = {}) {
+      return createLoadoutFromDeckHash(input, { ...options, ...requestOptions });
     },
     resolveLoadout(loadoutId: string, requestOptions: AuthRequestOptions = {}) {
       return resolveLoadout(loadoutId, { ...options, ...requestOptions });
