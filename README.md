@@ -8,16 +8,27 @@ import { createAuthClient } from "optcg-auth-client";
 const auth = createAuthClient();
 await auth.login({ username: "name", password: "password" });
 const session = await auth.getSession();
+const handoff = await auth.createSimHandoff({ loadout_id: "loadout-id" });
 await auth.logout();
 ```
 
 Requests use `credentials: "include"` so the browser sends and receives the `auth.poneglyph.one` HTTP-only session cookie.
+
+Sim handoff verification is also exported for server-side match code:
+
+```ts
+import { verifySimHandoff } from "optcg-auth-client";
+
+const verified = await verifySimHandoff(handoffToken);
+```
 
 ## API
 
 - `buildAuthUrl(path, params?, options?)`
 - `authFetch(path, params?, options?)`
 - `authPost(path, body, options?)`
+- `createSimHandoff(input, options?)`
+- `verifySimHandoff(token, options?)`
 - `createAuthClient(options?)`
 - `AuthClientError`
 

@@ -62,6 +62,57 @@ export type LogoutResponse = {
   };
 };
 
+export type CreateSimHandoffInput = {
+  loadout_id: string;
+  lobby_id?: string | null;
+  seat_id?: string | null;
+};
+
+export type ResolvedSimLoadout = {
+  loadout_id: string;
+  user_id: string;
+  main_deck: {
+    deck_id: string;
+    hash: string;
+  };
+  don_deck: {
+    don_deck_id: string | null;
+    payload: Record<string, unknown> | null;
+  };
+  cosmetics: {
+    playmat_id: string;
+    don_sleeve_id: string;
+    deck_sleeve_id: string;
+  };
+};
+
+export type SimHandoffClaims = {
+  jti: string;
+  sub: string;
+  sid: string;
+  loadout_id: string;
+  lobby_id: string | null;
+  seat_id: string | null;
+  aud: "optcg-sim";
+  iat: number;
+  exp: number;
+};
+
+export type SimHandoffResponse = {
+  data: {
+    token: string;
+    expires_at: string;
+    resolved_loadout: ResolvedSimLoadout;
+  };
+};
+
+export type SimHandoffVerifyResponse = {
+  data: {
+    claims: SimHandoffClaims;
+    resolved_loadout: ResolvedSimLoadout;
+  };
+};
+
 export class AuthClientError extends Error {
   readonly status: number;
   readonly body: unknown;
@@ -182,6 +233,20 @@ export async function authPost<T>(
   );
 }
 
+export function createSimHandoff(
+  input: CreateSimHandoffInput,
+  options: AuthRequestOptions = {},
+) {
+  return authPost<SimHandoffResponse>("/sim/handoff", input, options);
+}
+
+export function verifySimHandoff(
+  token: string,
+  options: AuthRequestOptions = {},
+) {
+  return authPost<SimHandoffVerifyResponse>("/sim/handoff/verify", { token }, options);
+}
+
 export function createAuthClient(options: AuthClientOptions = {}) {
   return {
     buildUrl(path: string, params?: QueryParams) {
@@ -204,6 +269,12 @@ export function createAuthClient(options: AuthClientOptions = {}) {
     },
     getSession(requestOptions: AuthRequestOptions = {}) {
       return authFetch<AuthSessionResponse>("/auth/session", undefined, { ...options, ...requestOptions });
+    },
+    createSimHandoff(input: CreateSimHandoffInput, requestOptions: AuthRequestOptions = {}) {
+      return createSimHandoff(input, { ...options, ...requestOptions });
+    },
+    verifySimHandoff(token: string, requestOptions: AuthRequestOptions = {}) {
+      return verifySimHandoff(token, { ...options, ...requestOptions });
     },
   };
 }

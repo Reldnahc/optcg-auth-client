@@ -7,6 +7,8 @@ import {
   authPost,
   buildAuthUrl,
   createAuthClient,
+  createSimHandoff,
+  verifySimHandoff,
 } from "../dist/index.js";
 
 function jsonResponse(body, status = 200) {
@@ -141,4 +143,160 @@ test("createAuthClient exposes typed auth endpoint helpers", async () => {
     ],
   );
   assert.equal(requests.every((request) => request.init.credentials === "include"), true);
+});
+
+test("createSimHandoff posts to the sim handoff endpoint", async () => {
+  const requests = [];
+  const fetchImpl = (input, init) => {
+    requests.push({ input: String(input), init });
+    return Promise.resolve(jsonResponse({
+      data: {
+        token: "handoff-token",
+        expires_at: "2026-06-02T18:00:00.000Z",
+        resolved_loadout: {
+          loadout_id: "loadout-1",
+          user_id: "user-1",
+          main_deck: {
+            deck_id: "deck-1",
+            hash: "deck-hash",
+          },
+          don_deck: {
+            don_deck_id: null,
+            payload: null,
+          },
+          cosmetics: {
+            playmat_id: "playmat-default",
+            don_sleeve_id: "don-default",
+            deck_sleeve_id: "deck-default",
+          },
+        },
+      },
+    }));
+  };
+
+  const response = await createSimHandoff({
+    loadout_id: "loadout-1",
+    lobby_id: "lobby-1",
+    seat_id: "p1",
+  }, { baseUrl: "https://auth.example", fetch: fetchImpl });
+
+  assert.equal(response.data.token, "handoff-token");
+  assert.equal(response.data.resolved_loadout.main_deck.hash, "deck-hash");
+  assert.deepEqual(
+    requests.map((request) => request.input),
+    ["https://auth.example/v1/sim/handoff"],
+  );
+  assert.equal(requests[0].init.method, "POST");
+  assert.equal(requests[0].init.credentials, "include");
+  assert.equal(requests[0].init.body, JSON.stringify({
+    loadout_id: "loadout-1",
+    lobby_id: "lobby-1",
+    seat_id: "p1",
+  }));
+});
+
+test("verifySimHandoff posts token to the server verification endpoint", async () => {
+  const requests = [];
+  const fetchImpl = (input, init) => {
+    requests.push({ input: String(input), init });
+    return Promise.resolve(jsonResponse({
+      data: {
+        claims: {
+          jti: "token-id",
+          sub: "user-1",
+          sid: "session-1",
+          loadout_id: "loadout-1",
+          lobby_id: null,
+          seat_id: "p1",
+          aud: "optcg-sim",
+          iat: 1780443000,
+          exp: 1780443120,
+        },
+        resolved_loadout: {
+          loadout_id: "loadout-1",
+          user_id: "user-1",
+          main_deck: {
+            deck_id: "deck-1",
+            hash: null,
+          },
+          don_deck: {
+            don_deck_id: null,
+            payload: null,
+          },
+          cosmetics: {
+            playmat_id: "playmat-default",
+            don_sleeve_id: "don-default",
+            deck_sleeve_id: "deck-default",
+          },
+        },
+      },
+    }));
+  };
+
+  const response = await verifySimHandoff("handoff-token", {
+    baseUrl: "https://auth.example",
+    fetch: fetchImpl,
+  });
+
+  assert.equal(response.data.claims.aud, "optcg-sim");
+  assert.equal(response.data.resolved_loadout.loadout_id, "loadout-1");
+  assert.deepEqual(
+    requests.map((request) => request.input),
+    ["https://auth.example/v1/sim/handoff/verify"],
+  );
+  assert.equal(requests[0].init.method, "POST");
+  assert.equal(requests[0].init.body, JSON.stringify({ token: "handoff-token" }));
+});
+
+test("createAuthClient exposes sim handoff helpers", async () => {
+  const requests = [];
+  const fetchImpl = (input, init) => {
+    requests.push({ input: String(input), init });
+    return Promise.resolve(jsonResponse({
+      data: {
+        token: "handoff-token",
+        expires_at: "2026-06-02T18:00:00.000Z",
+        resolved_loadout: {
+          loadout_id: "loadout-1",
+          user_id: "user-1",
+          main_deck: {
+            deck_id: "deck-1",
+            hash: null,
+          },
+          don_deck: {
+            don_deck_id: null,
+            payload: null,
+          },
+          cosmetics: {
+            playmat_id: "playmat-default",
+            don_sleeve_id: "don-default",
+            deck_sleeve_id: "deck-default",
+          },
+        },
+        claims: {
+          jti: "token-id",
+          sub: "user-1",
+          sid: "session-1",
+          loadout_id: "loadout-1",
+          lobby_id: null,
+          seat_id: null,
+          aud: "optcg-sim",
+          iat: 1780443000,
+          exp: 1780443120,
+        },
+      },
+    }));
+  };
+  const client = createAuthClient({ baseUrl: "https://auth.example", fetch: fetchImpl });
+
+  await client.createSimHandoff({ loadout_id: "loadout-1" });
+  await client.verifySimHandoff("handoff-token");
+
+  assert.deepEqual(
+    requests.map((request) => request.input),
+    [
+      "https://auth.example/v1/sim/handoff",
+      "https://auth.example/v1/sim/handoff/verify",
+    ],
+  );
 });
