@@ -62,6 +62,22 @@ export type LogoutResponse = {
   };
 };
 
+export type Loadout = {
+  id: string;
+  name: string;
+  main_deck_id: string;
+  don_deck_id: string | null;
+  playmat_id: string;
+  don_sleeve_id: string;
+  deck_sleeve_id: string;
+  icon_id: string;
+  updated_at: string;
+};
+
+export type LoadoutListResponse = {
+  data: Loadout[];
+};
+
 export type CreateSimHandoffInput = {
   loadout_id: string;
   lobby_id?: string | null;
@@ -104,6 +120,10 @@ export type SimHandoffResponse = {
     expires_at: string;
     resolved_loadout: ResolvedSimLoadout;
   };
+};
+
+export type ResolvedLoadoutResponse = {
+  data: ResolvedSimLoadout;
 };
 
 export type SimHandoffVerifyResponse = {
@@ -240,6 +260,21 @@ export function createSimHandoff(
   return authPost<SimHandoffResponse>("/sim/handoff", input, options);
 }
 
+export function listLoadouts(options: AuthRequestOptions = {}) {
+  return authFetch<LoadoutListResponse>("/loadouts", undefined, options);
+}
+
+export function resolveLoadout(
+  loadoutId: string,
+  options: AuthRequestOptions = {},
+) {
+  return authPost<ResolvedLoadoutResponse>(
+    `/loadouts/${encodeURIComponent(loadoutId)}/resolve`,
+    {},
+    options,
+  );
+}
+
 export function verifySimHandoff(
   token: string,
   options: AuthRequestOptions = {},
@@ -269,6 +304,12 @@ export function createAuthClient(options: AuthClientOptions = {}) {
     },
     getSession(requestOptions: AuthRequestOptions = {}) {
       return authFetch<AuthSessionResponse>("/auth/session", undefined, { ...options, ...requestOptions });
+    },
+    listLoadouts(requestOptions: AuthRequestOptions = {}) {
+      return listLoadouts({ ...options, ...requestOptions });
+    },
+    resolveLoadout(loadoutId: string, requestOptions: AuthRequestOptions = {}) {
+      return resolveLoadout(loadoutId, { ...options, ...requestOptions });
     },
     createSimHandoff(input: CreateSimHandoffInput, requestOptions: AuthRequestOptions = {}) {
       return createSimHandoff(input, { ...options, ...requestOptions });

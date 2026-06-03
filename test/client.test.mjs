@@ -145,6 +145,76 @@ test("createAuthClient exposes typed auth endpoint helpers", async () => {
   assert.equal(requests.every((request) => request.init.credentials === "include"), true);
 });
 
+test("listLoadouts fetches account loadouts with browser credentials", async () => {
+  const requests = [];
+  const fetchImpl = (input, init) => {
+    requests.push({ input: String(input), init });
+    return Promise.resolve(jsonResponse({
+      data: [
+        {
+          id: "loadout-1",
+          name: "Main Imu",
+          main_deck_id: "deck-1",
+          don_deck_id: null,
+          playmat_id: "playmat-default",
+          don_sleeve_id: "don-default",
+          deck_sleeve_id: "deck-default",
+          icon_id: "icon-default",
+          updated_at: "2026-06-03T00:00:00.000Z",
+        },
+      ],
+    }));
+  };
+  const client = createAuthClient({ baseUrl: "https://auth.example", fetch: fetchImpl });
+
+  const response = await client.listLoadouts();
+
+  assert.equal(response.data[0].name, "Main Imu");
+  assert.deepEqual(
+    requests.map((request) => request.input),
+    ["https://auth.example/v1/loadouts"],
+  );
+  assert.equal(requests[0].init.credentials, "include");
+});
+
+test("resolveLoadout fetches the sim-facing resolved loadout package", async () => {
+  const requests = [];
+  const fetchImpl = (input, init) => {
+    requests.push({ input: String(input), init });
+    return Promise.resolve(jsonResponse({
+      data: {
+        loadout_id: "loadout-1",
+        user_id: "user-1",
+        main_deck: {
+          deck_id: "deck-1",
+          hash: "deck-hash",
+        },
+        don_deck: {
+          don_deck_id: null,
+          payload: null,
+        },
+        cosmetics: {
+          playmat_id: "playmat-default",
+          don_sleeve_id: "don-default",
+          deck_sleeve_id: "deck-default",
+        },
+      },
+    }));
+  };
+  const client = createAuthClient({ baseUrl: "https://auth.example", fetch: fetchImpl });
+
+  const response = await client.resolveLoadout("loadout-1");
+
+  assert.equal(response.data.main_deck.hash, "deck-hash");
+  assert.deepEqual(
+    requests.map((request) => request.input),
+    ["https://auth.example/v1/loadouts/loadout-1/resolve"],
+  );
+  assert.equal(requests[0].init.method, "POST");
+  assert.equal(requests[0].init.credentials, "include");
+  assert.equal(requests[0].init.body, JSON.stringify({}));
+});
+
 test("createSimHandoff posts to the sim handoff endpoint", async () => {
   const requests = [];
   const fetchImpl = (input, init) => {
