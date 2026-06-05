@@ -90,6 +90,83 @@ export type LoadoutResponse = {
   data: Loadout;
 };
 
+export type DeckCollectionKind = "deck" | "list";
+
+export type DeckLibraryFolder = {
+  id: string;
+  user_id: string;
+  name: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DeckCollection = {
+  id: string;
+  user_id: string;
+  name: string;
+  deck_hash: string | null;
+  deck: Record<string, unknown> | null;
+  folder_id: string | null;
+  kind: DeckCollectionKind;
+  leader_card_number: string | null;
+  leader_variant_index: number | null;
+  leader_copy_count: number;
+  preview_card_number: string | null;
+  preview_variant_index: number | null;
+  max_copies_of_single_card: number;
+  main_count: number;
+  favorite: boolean;
+  loadout_id: string | null;
+  don_deck_id: string | null;
+  playmat_cosmetic_id: string | null;
+  don_sleeve_cosmetic_id: string | null;
+  deck_sleeve_cosmetic_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DeckLibrary = {
+  folders: DeckLibraryFolder[];
+  decks: DeckCollection[];
+};
+
+export type DeckLibraryResponse = {
+  data: DeckLibrary;
+};
+
+export type DeckLibraryFolderWrite = {
+  id?: string;
+  name: string;
+  sort_order?: number;
+};
+
+export type DeckCollectionWrite = {
+  id?: string;
+  name: string;
+  deck_hash: string;
+  folder_id?: string | null;
+  kind?: DeckCollectionKind;
+  leader_card_number?: string | null;
+  leader_variant_index?: number | null;
+  leader_copy_count?: number;
+  preview_card_number?: string | null;
+  preview_variant_index?: number | null;
+  max_copies_of_single_card?: number;
+  main_count?: number;
+  favorite?: boolean;
+  loadout_id?: string | null;
+  don_deck_id?: string | null;
+  playmat_cosmetic_id?: string | null;
+  don_sleeve_cosmetic_id?: string | null;
+  deck_sleeve_cosmetic_id?: string | null;
+};
+
+export type DeckLibraryWrite = {
+  folders: DeckLibraryFolderWrite[];
+  decks: DeckCollectionWrite[];
+};
+
 export type CreateSimHandoffInput = {
   loadout_id: string;
   lobby_id?: string | null;
@@ -265,11 +342,47 @@ export async function authPost<T>(
   );
 }
 
+export async function authPut<T>(
+  path: string,
+  body: unknown,
+  options: AuthRequestOptions = {},
+) {
+  return requestJson<T>(
+    buildAuthUrl(path, undefined, options),
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    },
+    options,
+  );
+}
+
 export function createSimHandoff(
   input: CreateSimHandoffInput,
   options: AuthRequestOptions = {},
 ) {
   return authPost<SimHandoffResponse>("/sim/handoff", input, options);
+}
+
+export function getDeckLibrary(options: AuthRequestOptions = {}) {
+  return authFetch<DeckLibraryResponse>("/deck-library", undefined, options);
+}
+
+export function replaceDeckLibrary(
+  input: DeckLibraryWrite,
+  options: AuthRequestOptions = {},
+) {
+  return authPut<DeckLibraryResponse>("/deck-library", input, options);
+}
+
+export function syncDeckLibrary(
+  input: DeckLibraryWrite,
+  options: AuthRequestOptions = {},
+) {
+  return authPost<DeckLibraryResponse>("/deck-library/sync", input, options);
 }
 
 export function listLoadouts(options: AuthRequestOptions = {}) {
@@ -312,6 +425,9 @@ export function createAuthClient(options: AuthClientOptions = {}) {
     post<T>(path: string, body: unknown, requestOptions: AuthRequestOptions = {}) {
       return authPost<T>(path, body, { ...options, ...requestOptions });
     },
+    put<T>(path: string, body: unknown, requestOptions: AuthRequestOptions = {}) {
+      return authPut<T>(path, body, { ...options, ...requestOptions });
+    },
     login(input: LoginInput, requestOptions: AuthRequestOptions = {}) {
       return authPost<AuthResponse>("/auth/login", input, { ...options, ...requestOptions });
     },
@@ -330,6 +446,15 @@ export function createAuthClient(options: AuthClientOptions = {}) {
     },
     listLoadouts(requestOptions: AuthRequestOptions = {}) {
       return listLoadouts({ ...options, ...requestOptions });
+    },
+    getDeckLibrary(requestOptions: AuthRequestOptions = {}) {
+      return getDeckLibrary({ ...options, ...requestOptions });
+    },
+    replaceDeckLibrary(input: DeckLibraryWrite, requestOptions: AuthRequestOptions = {}) {
+      return replaceDeckLibrary(input, { ...options, ...requestOptions });
+    },
+    syncDeckLibrary(input: DeckLibraryWrite, requestOptions: AuthRequestOptions = {}) {
+      return syncDeckLibrary(input, { ...options, ...requestOptions });
     },
     createLoadoutFromDeckHash(input: CreateLoadoutFromDeckHashInput, requestOptions: AuthRequestOptions = {}) {
       return createLoadoutFromDeckHash(input, { ...options, ...requestOptions });

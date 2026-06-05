@@ -5,10 +5,14 @@ import {
   DEFAULT_AUTH_BASE_URL,
   authFetch,
   authPost,
+  authPut,
   buildAuthUrl,
   createAuthClient,
   createLoadoutFromDeckHash,
+  getDeckLibrary,
+  replaceDeckLibrary,
   createSimHandoff,
+  syncDeckLibrary,
   verifySimHandoff,
 } from "../dist/index.js";
 
@@ -62,6 +66,22 @@ test("authPost sends JSON with browser credentials", async () => {
   assert.equal(requests[0].init.credentials, "include");
   assert.equal(requests[0].init.headers["Content-Type"], "application/json");
   assert.equal(requests[0].init.body, JSON.stringify({ reason: "test" }));
+});
+
+test("authPut sends JSON with browser credentials", async () => {
+  const requests = [];
+  const fetchImpl = (input, init) => {
+    requests.push({ input, init });
+    return Promise.resolve(jsonResponse({ data: { ok: true } }));
+  };
+
+  await authPut("/deck-library", { folders: [], decks: [] }, { fetch: fetchImpl });
+
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].init.method, "PUT");
+  assert.equal(requests[0].init.credentials, "include");
+  assert.equal(requests[0].init.headers["Content-Type"], "application/json");
+  assert.equal(requests[0].init.body, JSON.stringify({ folders: [], decks: [] }));
 });
 
 test("auth requests throw typed errors with service messages", async () => {
@@ -228,6 +248,98 @@ test("createLoadoutFromDeckHash posts only the hash and name", async () => {
     deck_hash: "hash-with-variants",
   });
   assert.equal(requests[0].init.body.includes('"deck"'), false);
+});
+
+test("deck library helpers target account library endpoints", async () => {
+  const requests = [];
+  const fetchImpl = (input, init) => {
+    requests.push({ input: String(input), init });
+    return Promise.resolve(jsonResponse({
+      data: {
+        folders: [{
+          id: "folder-1",
+          user_id: "user-1",
+          name: "Ranked",
+          sort_order: 0,
+          created_at: "2026-06-03T00:00:00.000Z",
+          updated_at: "2026-06-03T00:00:00.000Z",
+        }],
+        decks: [{
+          id: "deck-1",
+          user_id: "user-1",
+          name: "Red Luffy",
+          deck_hash: "deck-hash",
+          deck: null,
+          folder_id: "folder-1",
+          kind: "deck",
+          leader_card_number: "OP01-003",
+          leader_variant_index: 0,
+          leader_copy_count: 1,
+          preview_card_number: "OP01-001",
+          preview_variant_index: 0,
+          max_copies_of_single_card: 4,
+          main_count: 50,
+          favorite: true,
+          loadout_id: "loadout-1",
+          don_deck_id: "don-1",
+          playmat_cosmetic_id: "playmat-1",
+          don_sleeve_cosmetic_id: "don-sleeve-1",
+          deck_sleeve_cosmetic_id: "deck-sleeve-1",
+          created_at: "2026-06-03T00:00:00.000Z",
+          updated_at: "2026-06-03T00:00:00.000Z",
+        }],
+      },
+    }));
+  };
+  const input = {
+    folders: [{ id: "folder-1", name: "Ranked", sort_order: 0 }],
+    decks: [{
+      id: "deck-1",
+      name: "Red Luffy",
+      deck_hash: "deck-hash",
+      folder_id: "folder-1",
+      favorite: true,
+      loadout_id: "loadout-1",
+      don_deck_id: "don-1",
+      playmat_cosmetic_id: "playmat-1",
+      don_sleeve_cosmetic_id: "don-sleeve-1",
+      deck_sleeve_cosmetic_id: "deck-sleeve-1",
+    }],
+  };
+  const client = createAuthClient({ baseUrl: "https://auth.example", fetch: fetchImpl });
+
+  const fetched = await getDeckLibrary({ baseUrl: "https://auth.example", fetch: fetchImpl });
+  const replaced = await replaceDeckLibrary(input, { baseUrl: "https://auth.example", fetch: fetchImpl });
+  const synced = await syncDeckLibrary(input, { baseUrl: "https://auth.example", fetch: fetchImpl });
+  await client.getDeckLibrary();
+  await client.replaceDeckLibrary(input);
+  await client.syncDeckLibrary(input);
+
+  assert.equal(fetched.data.decks[0].deck_hash, "deck-hash");
+  assert.equal(fetched.data.decks[0].loadout_id, "loadout-1");
+  assert.equal(fetched.data.decks[0].deck_sleeve_cosmetic_id, "deck-sleeve-1");
+  assert.equal(replaced.data.folders[0].name, "Ranked");
+  assert.equal(synced.data.decks[0].deck, null);
+  assert.deepEqual(
+    requests.map((request) => request.input),
+    [
+      "https://auth.example/v1/deck-library",
+      "https://auth.example/v1/deck-library",
+      "https://auth.example/v1/deck-library/sync",
+      "https://auth.example/v1/deck-library",
+      "https://auth.example/v1/deck-library",
+      "https://auth.example/v1/deck-library/sync",
+    ],
+  );
+  assert.deepEqual(
+    requests.map((request) => request.init.method ?? "GET"),
+    ["GET", "PUT", "POST", "GET", "PUT", "POST"],
+  );
+  assert.equal(requests.every((request) => request.init.credentials === "include"), true);
+  assert.equal(requests[1].init.body.includes('"deck_hash":"deck-hash"'), true);
+  assert.equal(requests[1].init.body.includes('"loadout_id":"loadout-1"'), true);
+  assert.equal(requests[1].init.body.includes('"deck_sleeve_cosmetic_id":"deck-sleeve-1"'), true);
+  assert.equal(requests[1].init.body.includes('"deck"'), false);
 });
 
 test("resolveLoadout fetches the sim-facing resolved loadout package", async () => {

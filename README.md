@@ -9,6 +9,8 @@ const auth = createAuthClient();
 await auth.login({ username: "name", password: "password" });
 await auth.register({ username: "name", password: "password", email: null });
 const session = await auth.getSession();
+const library = await auth.getDeckLibrary();
+await auth.syncDeckLibrary({ folders: [], decks: [] });
 const handoff = await auth.createSimHandoff({ loadout_id: "loadout-id" });
 await auth.logout();
 ```
@@ -29,6 +31,10 @@ const verified = await verifySimHandoff(handoffToken);
 - `buildAuthUrl(path, params?, options?)`
 - `authFetch(path, params?, options?)`
 - `authPost(path, body, options?)`
+- `authPut(path, body, options?)`
+- `getDeckLibrary(options?)`
+- `replaceDeckLibrary(input, options?)`
+- `syncDeckLibrary(input, options?)`
 - `createSimHandoff(input, options?)`
 - `verifySimHandoff(token, options?)`
 - `createAuthClient(options?)`
