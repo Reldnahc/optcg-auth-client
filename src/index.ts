@@ -173,6 +173,12 @@ export type CreateSimHandoffInput = {
   seat_id?: string | null;
 };
 
+export type CreateSimHandoffsInput = {
+  loadout_ids: string[];
+  lobby_id?: string | null;
+  seat_id?: string | null;
+};
+
 export type ResolvedSimLoadout = {
   loadout_id: string;
   user_id: string;
@@ -211,6 +217,30 @@ export type SimHandoffResponse = {
   };
 };
 
+export type SimHandoffBatchError = {
+  status: number;
+  message: string;
+};
+
+export type SimHandoffBatchCreated = {
+  loadout_id: string;
+  status: "created";
+  token: string;
+  expires_at: string;
+};
+
+export type SimHandoffBatchRejected = {
+  loadout_id: string;
+  status: "rejected";
+  error: SimHandoffBatchError;
+};
+
+export type SimHandoffBatchResponse = {
+  data: {
+    handoffs: Array<SimHandoffBatchCreated | SimHandoffBatchRejected>;
+  };
+};
+
 export type ResolvedLoadoutResponse = {
   data: ResolvedSimLoadout;
 };
@@ -219,6 +249,23 @@ export type SimHandoffVerifyResponse = {
   data: {
     claims: SimHandoffClaims;
     resolved_loadout: ResolvedSimLoadout;
+  };
+};
+
+export type SimHandoffBatchVerified = {
+  status: "verified";
+  claims: SimHandoffClaims;
+  resolved_loadout: ResolvedSimLoadout;
+};
+
+export type SimHandoffBatchVerifyRejected = {
+  status: "rejected";
+  error: SimHandoffBatchError;
+};
+
+export type SimHandoffBatchVerifyResponse = {
+  data: {
+    handoffs: Array<SimHandoffBatchVerified | SimHandoffBatchVerifyRejected>;
   };
 };
 
@@ -367,6 +414,13 @@ export function createSimHandoff(
   return authPost<SimHandoffResponse>("/sim/handoff", input, options);
 }
 
+export function createSimHandoffs(
+  input: CreateSimHandoffsInput,
+  options: AuthRequestOptions = {},
+) {
+  return authPost<SimHandoffBatchResponse>("/sim/handoffs", input, options);
+}
+
 export function getDeckLibrary(options: AuthRequestOptions = {}) {
   return authFetch<DeckLibraryResponse>("/deck-library", undefined, options);
 }
@@ -412,6 +466,13 @@ export function verifySimHandoff(
   options: AuthRequestOptions = {},
 ) {
   return authPost<SimHandoffVerifyResponse>("/sim/handoff/verify", { token }, options);
+}
+
+export function verifySimHandoffs(
+  tokens: string[],
+  options: AuthRequestOptions = {},
+) {
+  return authPost<SimHandoffBatchVerifyResponse>("/sim/handoffs/verify", { tokens }, options);
 }
 
 export function createAuthClient(options: AuthClientOptions = {}) {
@@ -465,8 +526,14 @@ export function createAuthClient(options: AuthClientOptions = {}) {
     createSimHandoff(input: CreateSimHandoffInput, requestOptions: AuthRequestOptions = {}) {
       return createSimHandoff(input, { ...options, ...requestOptions });
     },
+    createSimHandoffs(input: CreateSimHandoffsInput, requestOptions: AuthRequestOptions = {}) {
+      return createSimHandoffs(input, { ...options, ...requestOptions });
+    },
     verifySimHandoff(token: string, requestOptions: AuthRequestOptions = {}) {
       return verifySimHandoff(token, { ...options, ...requestOptions });
+    },
+    verifySimHandoffs(tokens: string[], requestOptions: AuthRequestOptions = {}) {
+      return verifySimHandoffs(tokens, { ...options, ...requestOptions });
     },
   };
 }

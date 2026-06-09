@@ -12,8 +12,10 @@ import {
   getDeckLibrary,
   replaceDeckLibrary,
   createSimHandoff,
+  createSimHandoffs,
   syncDeckLibrary,
   verifySimHandoff,
+  verifySimHandoffs,
 } from "../dist/index.js";
 
 function jsonResponse(body, status = 200) {
@@ -430,6 +432,53 @@ test("createSimHandoff posts to the sim handoff endpoint", async () => {
   }));
 });
 
+test("createSimHandoffs posts loadout ids to the batch sim handoff endpoint", async () => {
+  const requests = [];
+  const fetchImpl = (input, init) => {
+    requests.push({ input: String(input), init });
+    return Promise.resolve(jsonResponse({
+      data: {
+        handoffs: [
+          {
+            loadout_id: "loadout-1",
+            status: "created",
+            token: "handoff-token-1",
+            expires_at: "2026-06-02T18:00:00.000Z",
+          },
+          {
+            loadout_id: "loadout-2",
+            status: "rejected",
+            error: {
+              status: 403,
+              message: "Saved deck hash is required for sim handoff.",
+            },
+          },
+        ],
+      },
+    }));
+  };
+
+  const response = await createSimHandoffs({
+    loadout_ids: ["loadout-1", "loadout-2"],
+    lobby_id: "lobby-1",
+    seat_id: null,
+  }, { baseUrl: "https://auth.example", fetch: fetchImpl });
+
+  assert.equal(response.data.handoffs[0].token, "handoff-token-1");
+  assert.equal(response.data.handoffs[1].status, "rejected");
+  assert.deepEqual(
+    requests.map((request) => request.input),
+    ["https://auth.example/v1/sim/handoffs"],
+  );
+  assert.equal(requests[0].init.method, "POST");
+  assert.equal(requests[0].init.credentials, "include");
+  assert.equal(requests[0].init.body, JSON.stringify({
+    loadout_ids: ["loadout-1", "loadout-2"],
+    lobby_id: "lobby-1",
+    seat_id: null,
+  }));
+});
+
 test("verifySimHandoff posts token to the server verification endpoint", async () => {
   const requests = [];
   const fetchImpl = (input, init) => {
@@ -483,6 +532,73 @@ test("verifySimHandoff posts token to the server verification endpoint", async (
   assert.equal(requests[0].init.body, JSON.stringify({ token: "handoff-token" }));
 });
 
+test("verifySimHandoffs posts tokens to the batch server verification endpoint", async () => {
+  const requests = [];
+  const fetchImpl = (input, init) => {
+    requests.push({ input: String(input), init });
+    return Promise.resolve(jsonResponse({
+      data: {
+        handoffs: [
+          {
+            status: "verified",
+            claims: {
+              jti: "token-id",
+              sub: "user-1",
+              sid: "session-1",
+              loadout_id: "loadout-1",
+              lobby_id: null,
+              seat_id: null,
+              aud: "optcg-sim",
+              iat: 1780443000,
+              exp: 1780443120,
+            },
+            resolved_loadout: {
+              loadout_id: "loadout-1",
+              user_id: "user-1",
+              main_deck: {
+                deck_id: "deck-1",
+                hash: "deck-hash",
+              },
+              don_deck: {
+                don_deck_id: null,
+                payload: null,
+              },
+              cosmetics: {
+                playmat_id: "playmat-default",
+                don_sleeve_id: "don-default",
+                deck_sleeve_id: "deck-default",
+              },
+            },
+          },
+          {
+            status: "rejected",
+            error: {
+              status: 401,
+              message: "Invalid sim handoff token",
+            },
+          },
+        ],
+      },
+    }));
+  };
+
+  const response = await verifySimHandoffs(["handoff-token-1", "bad-token"], {
+    baseUrl: "https://auth.example",
+    fetch: fetchImpl,
+  });
+
+  assert.equal(response.data.handoffs[0].resolved_loadout.main_deck.hash, "deck-hash");
+  assert.equal(response.data.handoffs[1].status, "rejected");
+  assert.deepEqual(
+    requests.map((request) => request.input),
+    ["https://auth.example/v1/sim/handoffs/verify"],
+  );
+  assert.equal(requests[0].init.method, "POST");
+  assert.equal(requests[0].init.body, JSON.stringify({
+    tokens: ["handoff-token-1", "bad-token"],
+  }));
+});
+
 test("createAuthClient exposes sim handoff helpers", async () => {
   const requests = [];
   const fetchImpl = (input, init) => {
@@ -525,13 +641,17 @@ test("createAuthClient exposes sim handoff helpers", async () => {
   const client = createAuthClient({ baseUrl: "https://auth.example", fetch: fetchImpl });
 
   await client.createSimHandoff({ loadout_id: "loadout-1" });
+  await client.createSimHandoffs({ loadout_ids: ["loadout-1"] });
   await client.verifySimHandoff("handoff-token");
+  await client.verifySimHandoffs(["handoff-token"]);
 
   assert.deepEqual(
     requests.map((request) => request.input),
     [
       "https://auth.example/v1/sim/handoff",
+      "https://auth.example/v1/sim/handoffs",
       "https://auth.example/v1/sim/handoff/verify",
+      "https://auth.example/v1/sim/handoffs/verify",
     ],
   );
 });
