@@ -183,6 +183,8 @@ test("listLoadouts fetches account loadouts with browser credentials", async () 
           id: "loadout-1",
           name: "Main Imu",
           main_deck_id: "deck-1",
+          leader_card_number: "OP05-060",
+          leader_variant_index: 1,
           don_deck_id: null,
           playmat_id: "playmat-default",
           don_sleeve_id: "don-default",
@@ -198,6 +200,8 @@ test("listLoadouts fetches account loadouts with browser credentials", async () 
   const response = await client.listLoadouts();
 
   assert.equal(response.data[0].name, "Main Imu");
+  assert.equal(response.data[0].leader_card_number, "OP05-060");
+  assert.equal(response.data[0].leader_variant_index, 1);
   assert.deepEqual(
     requests.map((request) => request.input),
     ["https://auth.example/v1/loadouts"],

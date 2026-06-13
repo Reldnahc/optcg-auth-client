@@ -69,6 +69,8 @@ export type Loadout = {
   id: string;
   name: string;
   main_deck_id: string;
+  leader_card_number: string | null;
+  leader_variant_index: number | null;
   don_deck_id: string | null;
   playmat_id: string;
   don_sleeve_id: string;
