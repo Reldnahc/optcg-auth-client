@@ -14,6 +14,7 @@ import {
   createSimHandoff,
   createSimHandoffs,
   syncDeckLibrary,
+  updateProfileAvatar,
   verifySimHandoff,
   verifySimHandoffs,
 } from "../dist/index.js";
@@ -84,6 +85,54 @@ test("authPut sends JSON with browser credentials", async () => {
   assert.equal(requests[0].init.credentials, "include");
   assert.equal(requests[0].init.headers["Content-Type"], "application/json");
   assert.equal(requests[0].init.body, JSON.stringify({ folders: [], decks: [] }));
+});
+
+test("updateProfileAvatar puts avatar crop metadata", async () => {
+  const requests = [];
+  const fetchImpl = (input, init) => {
+    requests.push({ input: String(input), init });
+    return Promise.resolve(jsonResponse({
+      data: {
+        user: {
+          id: "user-1",
+          username: "tester",
+          display_name: "Tester",
+          email: "tester@example.com",
+          email_verified: false,
+          profile: {
+            avatar: {
+              card_image_id: "image-1",
+              image_source: "scan",
+              image_url: "https://example.com/scan.png",
+              crop: { x: 0.1, y: 0.2, size: 0.5 },
+            },
+          },
+        },
+      },
+    }));
+  };
+  const input = {
+    card_image_id: "image-1",
+    image_source: "scan",
+    crop: { x: 0.1, y: 0.2, size: 0.5 },
+  };
+  const client = createAuthClient({ baseUrl: "https://auth.example", fetch: fetchImpl });
+
+  const response = await updateProfileAvatar(input, { baseUrl: "https://auth.example", fetch: fetchImpl });
+  const clientResponse = await client.updateProfileAvatar(input);
+
+  assert.equal(response.data.user.profile.avatar.card_image_id, "image-1");
+  assert.equal(clientResponse.data.user.profile.avatar.image_source, "scan");
+  assert.deepEqual(
+    requests.map((request) => request.input),
+    [
+      "https://auth.example/v1/me/profile/avatar",
+      "https://auth.example/v1/me/profile/avatar",
+    ],
+  );
+  assert.equal(requests.every((request) => request.init.method === "PUT"), true);
+  assert.equal(requests.every((request) => request.init.credentials === "include"), true);
+  assert.deepEqual(JSON.parse(requests[0].init.body), input);
 });
 
 test("auth requests throw typed errors with service messages", async () => {

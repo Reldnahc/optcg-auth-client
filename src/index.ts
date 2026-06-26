@@ -16,12 +16,28 @@ export type AuthRequestOptions = AuthClientOptions & {
   signal?: AbortSignal;
 };
 
+export type ProfileAvatarImageSource = "render" | "scan";
+
+export type ProfileAvatar = {
+  card_image_id: string;
+  image_source: ProfileAvatarImageSource;
+  image_url: string;
+  crop: {
+    x: number;
+    y: number;
+    size: number;
+  };
+};
+
 export type AuthUser = {
   id: string;
   username: string;
   display_name: string;
   email: string | null;
   email_verified: boolean;
+  profile: {
+    avatar: ProfileAvatar | null;
+  };
 };
 
 export type AuthSession = {
@@ -56,6 +72,22 @@ export type AuthSessionResponse = {
   data: {
     user: AuthUser;
     session: AuthSession;
+  };
+};
+
+export type UpdateProfileAvatarInput = {
+  card_image_id: string;
+  image_source: ProfileAvatarImageSource;
+  crop: {
+    x: number;
+    y: number;
+    size: number;
+  };
+};
+
+export type UpdateProfileAvatarResponse = {
+  data: {
+    user: AuthUser;
   };
 };
 
@@ -441,6 +473,13 @@ export function syncDeckLibrary(
   return authPost<DeckLibraryResponse>("/deck-library/sync", input, options);
 }
 
+export function updateProfileAvatar(
+  input: UpdateProfileAvatarInput,
+  options: AuthRequestOptions = {},
+) {
+  return authPut<UpdateProfileAvatarResponse>("/me/profile/avatar", input, options);
+}
+
 export function listLoadouts(options: AuthRequestOptions = {}) {
   return authFetch<LoadoutListResponse>("/loadouts", undefined, options);
 }
@@ -518,6 +557,9 @@ export function createAuthClient(options: AuthClientOptions = {}) {
     },
     syncDeckLibrary(input: DeckLibraryWrite, requestOptions: AuthRequestOptions = {}) {
       return syncDeckLibrary(input, { ...options, ...requestOptions });
+    },
+    updateProfileAvatar(input: UpdateProfileAvatarInput, requestOptions: AuthRequestOptions = {}) {
+      return updateProfileAvatar(input, { ...options, ...requestOptions });
     },
     createLoadoutFromDeckHash(input: CreateLoadoutFromDeckHashInput, requestOptions: AuthRequestOptions = {}) {
       return createLoadoutFromDeckHash(input, { ...options, ...requestOptions });
