@@ -29,6 +29,27 @@ export type ProfileAvatar = {
   };
 };
 
+export type ProfileTitleStyle = {
+  text_color: string;
+  font_family?: "display" | "body" | "mono";
+  font_weight?: number;
+  gradient?: {
+    from: string;
+    via?: string;
+    to: string;
+    angle?: number;
+  } | null;
+  outline_color?: string | null;
+  glow_color?: string | null;
+  animation?: "none" | "shine" | "pulse";
+};
+
+export type ProfileTitle = {
+  key: string;
+  label: string;
+  style: ProfileTitleStyle;
+};
+
 export type AuthUser = {
   id: string;
   username: string;
@@ -37,6 +58,8 @@ export type AuthUser = {
   email_verified: boolean;
   profile: {
     avatar: ProfileAvatar | null;
+    title: ProfileTitle | null;
+    unlocked_titles?: ProfileTitle[];
   };
 };
 
@@ -88,6 +111,16 @@ export type UpdateProfileAvatarInput = {
 };
 
 export type UpdateProfileAvatarResponse = {
+  data: {
+    user: AuthUser;
+  };
+};
+
+export type UpdateProfileTitleInput = {
+  title_key: string | null;
+};
+
+export type UpdateProfileTitleResponse = {
   data: {
     user: AuthUser;
   };
@@ -482,6 +515,13 @@ export function updateProfileAvatar(
   return authPut<UpdateProfileAvatarResponse>("/me/profile/avatar", input, options);
 }
 
+export function updateProfileTitle(
+  input: UpdateProfileTitleInput,
+  options: AuthRequestOptions = {},
+) {
+  return authPut<UpdateProfileTitleResponse>("/me/profile/title", input, options);
+}
+
 export function listLoadouts(options: AuthRequestOptions = {}) {
   return authFetch<LoadoutListResponse>("/loadouts", undefined, options);
 }
@@ -562,6 +602,9 @@ export function createAuthClient(options: AuthClientOptions = {}) {
     },
     updateProfileAvatar(input: UpdateProfileAvatarInput, requestOptions: AuthRequestOptions = {}) {
       return updateProfileAvatar(input, { ...options, ...requestOptions });
+    },
+    updateProfileTitle(input: UpdateProfileTitleInput, requestOptions: AuthRequestOptions = {}) {
+      return updateProfileTitle(input, { ...options, ...requestOptions });
     },
     createLoadoutFromDeckHash(input: CreateLoadoutFromDeckHashInput, requestOptions: AuthRequestOptions = {}) {
       return createLoadoutFromDeckHash(input, { ...options, ...requestOptions });

@@ -15,6 +15,7 @@ import {
   createSimHandoffs,
   syncDeckLibrary,
   updateProfileAvatar,
+  updateProfileTitle,
   verifySimHandoff,
   verifySimHandoffs,
 } from "../dist/index.js";
@@ -106,6 +107,7 @@ test("updateProfileAvatar puts avatar crop metadata", async () => {
               image_url: "https://example.com/scan.png",
               crop: { x: 0.1, y: 0.2, size: 0.5 },
             },
+            title: null,
           },
         },
       },
@@ -137,6 +139,57 @@ test("updateProfileAvatar puts avatar crop metadata", async () => {
   assert.deepEqual(JSON.parse(requests[0].init.body), input);
 });
 
+test("updateProfileTitle puts selected title key", async () => {
+  const requests = [];
+  const fetchImpl = (input, init) => {
+    requests.push({ input: String(input), init });
+    return Promise.resolve(jsonResponse({
+      data: {
+        user: {
+          id: "user-1",
+          username: "tester",
+          display_name: "Tester",
+          email: null,
+          email_verified: false,
+          profile: {
+            avatar: null,
+            title: {
+              key: "pirate_rookie",
+              label: "Pirate Rookie",
+              style: { text_color: "#e8e9ed", animation: "none" },
+            },
+            unlocked_titles: [
+              {
+                key: "pirate_rookie",
+                label: "Pirate Rookie",
+                style: { text_color: "#e8e9ed", animation: "none" },
+              },
+            ],
+          },
+        },
+      },
+    }));
+  };
+  const client = createAuthClient({ baseUrl: "https://auth.example", fetch: fetchImpl });
+
+  const response = await updateProfileTitle({ title_key: "pirate_rookie" }, { baseUrl: "https://auth.example", fetch: fetchImpl });
+  const clientResponse = await client.updateProfileTitle({ title_key: null });
+
+  assert.equal(response.data.user.profile.title.key, "pirate_rookie");
+  assert.equal(clientResponse.data.user.profile.unlocked_titles[0].key, "pirate_rookie");
+  assert.deepEqual(
+    requests.map((request) => request.input),
+    [
+      "https://auth.example/v1/me/profile/title",
+      "https://auth.example/v1/me/profile/title",
+    ],
+  );
+  assert.equal(requests.every((request) => request.init.method === "PUT"), true);
+  assert.equal(requests.every((request) => request.init.credentials === "include"), true);
+  assert.deepEqual(JSON.parse(requests[0].init.body), { title_key: "pirate_rookie" });
+  assert.deepEqual(JSON.parse(requests[1].init.body), { title_key: null });
+});
+
 test("auth requests throw typed errors with service messages", async () => {
   const fetchImpl = () => Promise.resolve(jsonResponse({
     error: { status: 401, message: "Invalid credentials" },
@@ -166,6 +219,10 @@ test("createAuthClient exposes typed auth endpoint helpers", async () => {
             display_name: "Tester",
             email: "tester@example.com",
             email_verified: false,
+            profile: {
+              avatar: null,
+              title: null,
+            },
           },
           session: {
             id: "session-1",
@@ -183,6 +240,10 @@ test("createAuthClient exposes typed auth endpoint helpers", async () => {
           display_name: "Tester",
           email: "tester@example.com",
           email_verified: false,
+          profile: {
+            avatar: null,
+            title: null,
+          },
         },
         session: {
           id: "session-1",
