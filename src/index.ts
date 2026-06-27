@@ -76,7 +76,9 @@ export type AuthSessionResponse = {
 };
 
 export type UpdateProfileAvatarInput = {
-  card_image_id: string;
+  card_number: string;
+  language: string;
+  variant_index: number;
   image_source: ProfileAvatarImageSource;
   crop: {
     x: number;

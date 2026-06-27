@@ -112,7 +112,9 @@ test("updateProfileAvatar puts avatar crop metadata", async () => {
     }));
   };
   const input = {
-    card_image_id: "image-1",
+    card_number: "OP01-001",
+    language: "en",
+    variant_index: 0,
     image_source: "scan",
     crop: { x: 0.1, y: 0.2, size: 0.5 },
   };
