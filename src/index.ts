@@ -48,6 +48,11 @@ export type ProfileTitle = {
   key: string;
   label: string;
   style: ProfileTitleStyle;
+  series_key?: string | null;
+  series_label?: string | null;
+  series_item_key?: string | null;
+  series_item_label?: string | null;
+  tier_key?: string | null;
 };
 
 export type AuthUser = {
