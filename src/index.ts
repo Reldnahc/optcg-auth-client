@@ -185,6 +185,10 @@ export type DeckCollection = {
   kind: DeckCollectionKind;
   leader_card_number: string | null;
   leader_variant_index: number | null;
+  leader_crop_focus: {
+    x: number | null;
+    y: number | null;
+  } | null;
   leader_copy_count: number;
   preview_card_number: string | null;
   preview_variant_index: number | null;

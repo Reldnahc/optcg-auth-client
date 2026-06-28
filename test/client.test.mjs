@@ -392,6 +392,7 @@ test("deck library helpers target account library endpoints", async () => {
           kind: "deck",
           leader_card_number: "OP01-003",
           leader_variant_index: 0,
+          leader_crop_focus: { x: 0.42, y: 0.18 },
           leader_copy_count: 1,
           preview_card_number: "OP01-001",
           preview_variant_index: 0,
@@ -435,6 +436,7 @@ test("deck library helpers target account library endpoints", async () => {
 
   assert.equal(fetched.data.decks[0].deck_hash, "deck-hash");
   assert.equal(fetched.data.decks[0].loadout_id, "loadout-1");
+  assert.deepEqual(fetched.data.decks[0].leader_crop_focus, { x: 0.42, y: 0.18 });
   assert.equal(fetched.data.decks[0].deck_sleeve_cosmetic_id, "deck-sleeve-1");
   assert.equal(replaced.data.folders[0].name, "Ranked");
   assert.equal(synced.data.decks[0].deck, null);
