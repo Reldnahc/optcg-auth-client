@@ -245,14 +245,25 @@ export type DeckLibraryWrite = {
   decks: DeckCollectionWrite[];
 };
 
+export type SimAccessEnvironment = "dev" | "local";
+
+export type SimAccessResponse = {
+  data: {
+    allowed: boolean;
+    environment: SimAccessEnvironment;
+  };
+};
+
 export type CreateSimHandoffInput = {
   loadout_id: string;
+  environment: SimAccessEnvironment;
   lobby_id?: string | null;
   seat_id?: string | null;
 };
 
 export type CreateSimHandoffsInput = {
   loadout_ids: string[];
+  environment: SimAccessEnvironment;
   lobby_id?: string | null;
   seat_id?: string | null;
 };
@@ -492,6 +503,13 @@ export function createSimHandoff(
   return authPost<SimHandoffResponse>("/sim/handoff", input, options);
 }
 
+export function checkSimAccess(
+  environment: SimAccessEnvironment,
+  options: AuthRequestOptions = {},
+) {
+  return authFetch<SimAccessResponse>("/sim/access", { environment }, options);
+}
+
 export function createSimHandoffs(
   input: CreateSimHandoffsInput,
   options: AuthRequestOptions = {},
@@ -620,6 +638,9 @@ export function createAuthClient(options: AuthClientOptions = {}) {
     },
     resolveLoadout(loadoutId: string, requestOptions: AuthRequestOptions = {}) {
       return resolveLoadout(loadoutId, { ...options, ...requestOptions });
+    },
+    checkSimAccess(environment: SimAccessEnvironment, requestOptions: AuthRequestOptions = {}) {
+      return checkSimAccess(environment, { ...options, ...requestOptions });
     },
     createSimHandoff(input: CreateSimHandoffInput, requestOptions: AuthRequestOptions = {}) {
       return createSimHandoff(input, { ...options, ...requestOptions });

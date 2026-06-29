@@ -11,7 +11,8 @@ await auth.register({ username: "name", password: "password", email: null });
 const session = await auth.getSession();
 const library = await auth.getDeckLibrary();
 await auth.syncDeckLibrary({ folders: [], decks: [] });
-const handoff = await auth.createSimHandoff({ loadout_id: "loadout-id" });
+await auth.checkSimAccess("dev");
+const handoff = await auth.createSimHandoff({ loadout_id: "loadout-id", environment: "dev" });
 await auth.logout();
 ```
 
@@ -35,8 +36,11 @@ const verified = await verifySimHandoff(handoffToken);
 - `getDeckLibrary(options?)`
 - `replaceDeckLibrary(input, options?)`
 - `syncDeckLibrary(input, options?)`
+- `checkSimAccess(environment, options?)`
 - `createSimHandoff(input, options?)`
+- `createSimHandoffs(input, options?)`
 - `verifySimHandoff(token, options?)`
+- `verifySimHandoffs(tokens, options?)`
 - `createAuthClient(options?)`
 - `AuthClientError`
 

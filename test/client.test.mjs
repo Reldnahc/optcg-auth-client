@@ -7,6 +7,7 @@ import {
   authPost,
   authPut,
   buildAuthUrl,
+  checkSimAccess,
   createAuthClient,
   createLoadoutFromDeckHash,
   getDeckLibrary,
@@ -531,6 +532,7 @@ test("createSimHandoff posts to the sim handoff endpoint", async () => {
 
   const response = await createSimHandoff({
     loadout_id: "loadout-1",
+    environment: "dev",
     lobby_id: "lobby-1",
     seat_id: "p1",
   }, { baseUrl: "https://auth.example", fetch: fetchImpl });
@@ -545,9 +547,38 @@ test("createSimHandoff posts to the sim handoff endpoint", async () => {
   assert.equal(requests[0].init.credentials, "include");
   assert.equal(requests[0].init.body, JSON.stringify({
     loadout_id: "loadout-1",
+    environment: "dev",
     lobby_id: "lobby-1",
     seat_id: "p1",
   }));
+});
+
+test("checkSimAccess fetches the sim access endpoint for an environment", async () => {
+  const requests = [];
+  const fetchImpl = (input, init) => {
+    requests.push({ input: String(input), init });
+    return Promise.resolve(jsonResponse({
+      data: {
+        allowed: true,
+        environment: "local",
+      },
+    }));
+  };
+  const client = createAuthClient({ baseUrl: "https://auth.example", fetch: fetchImpl });
+
+  const response = await checkSimAccess("local", { baseUrl: "https://auth.example", fetch: fetchImpl });
+  const clientResponse = await client.checkSimAccess("local");
+
+  assert.equal(response.data.allowed, true);
+  assert.equal(clientResponse.data.environment, "local");
+  assert.deepEqual(
+    requests.map((request) => request.input),
+    [
+      "https://auth.example/v1/sim/access?environment=local",
+      "https://auth.example/v1/sim/access?environment=local",
+    ],
+  );
+  assert.equal(requests.every((request) => request.init.credentials === "include"), true);
 });
 
 test("createSimHandoffs posts loadout ids to the batch sim handoff endpoint", async () => {
@@ -578,6 +609,7 @@ test("createSimHandoffs posts loadout ids to the batch sim handoff endpoint", as
 
   const response = await createSimHandoffs({
     loadout_ids: ["loadout-1", "loadout-2"],
+    environment: "dev",
     lobby_id: "lobby-1",
     seat_id: null,
   }, { baseUrl: "https://auth.example", fetch: fetchImpl });
@@ -592,6 +624,7 @@ test("createSimHandoffs posts loadout ids to the batch sim handoff endpoint", as
   assert.equal(requests[0].init.credentials, "include");
   assert.equal(requests[0].init.body, JSON.stringify({
     loadout_ids: ["loadout-1", "loadout-2"],
+    environment: "dev",
     lobby_id: "lobby-1",
     seat_id: null,
   }));
@@ -758,14 +791,16 @@ test("createAuthClient exposes sim handoff helpers", async () => {
   };
   const client = createAuthClient({ baseUrl: "https://auth.example", fetch: fetchImpl });
 
-  await client.createSimHandoff({ loadout_id: "loadout-1" });
-  await client.createSimHandoffs({ loadout_ids: ["loadout-1"] });
+  await client.checkSimAccess("dev");
+  await client.createSimHandoff({ loadout_id: "loadout-1", environment: "dev" });
+  await client.createSimHandoffs({ loadout_ids: ["loadout-1"], environment: "dev" });
   await client.verifySimHandoff("handoff-token");
   await client.verifySimHandoffs(["handoff-token"]);
 
   assert.deepEqual(
     requests.map((request) => request.input),
     [
+      "https://auth.example/v1/sim/access?environment=dev",
       "https://auth.example/v1/sim/handoff",
       "https://auth.example/v1/sim/handoffs",
       "https://auth.example/v1/sim/handoff/verify",
